@@ -1243,6 +1243,3 @@ See LICENSE file for details.
 - **Repository:** https://github.com/Monarch666/ProtocolV1
 - **Issues:** https://github.com/Monarch666/ProtocolV1/issues
 - **Discussions:** https://github.com/Monarch666/ProtocolV1/discussions
-
----
-
