@@ -1,11 +1,11 @@
 /*
  * UAVLink Phase 3 Advanced Optimizations
- * 
+ *
  * Features:
  * - LZ4 Payload Compression (50-70% reduction for repetitive data)
  * - Reed-Solomon Forward Error Correction (recover from packet loss)
  * - Delta Encoding for telemetry (encode only changes, not full values)
- * 
+ *
  * Expected benefits:
  * - Bandwidth: Additional 30-50% savings on top of Phase 1 (total 75-85% reduction)
  * - Reliability: Recover 25% packet loss without retransmission
@@ -27,9 +27,9 @@
 /**
  * LZ4 compression context for streaming compression
  */
-typedef struct {
-    uint8_t history[64 * 1024];  // 64KB history buffer
-    uint32_t history_pos;
+typedef struct
+{
+    uint32_t history_pos; // history buffer removed (was unused 64KB)
     bool initialized;
 } ul_lz4_ctx_t;
 
@@ -42,14 +42,14 @@ void ul_lz4_init(ul_lz4_ctx_t *ctx);
 /**
  * Compress data using fast LZ4 algorithm
  * Optimized for speed over compression ratio
- * 
+ *
  * @param input Input data
  * @param input_len Input length
  * @param output Output buffer (must be at least input_len + (input_len/255) + 16 bytes)
  * @param max_output Maximum output size
  * @return Compressed size, or negative on error
  */
-int ul_lz4_compress(const uint8_t *input, size_t input_len, 
+int ul_lz4_compress(const uint8_t *input, size_t input_len,
                     uint8_t *output, size_t max_output);
 
 /**
@@ -66,7 +66,7 @@ int ul_lz4_decompress(const uint8_t *input, size_t input_len,
 /**
  * Check if data is worth compressing
  * Returns true if compression likely provides >10% reduction
- * 
+ *
  * @param data Data to analyze
  * @param len Data length
  * @return true if compression recommended
@@ -83,19 +83,21 @@ bool ul_should_compress(const uint8_t *data, size_t len);
  * - Parity shards: Redundancy packets for error correction
  * - Can recover from up to 'parity_shards' lost packets
  */
-typedef struct {
-    uint8_t data_shards;     // Number of data packets (e.g., 4)
-    uint8_t parity_shards;   // Number of parity packets (e.g., 1 = recover 1 loss)
-    uint8_t shard_size;      // Size of each shard (e.g., 255 bytes)
+typedef struct
+{
+    uint8_t data_shards;   // Number of data packets (e.g., 4)
+    uint8_t parity_shards; // Number of parity packets (e.g., 1 = recover 1 loss)
+    uint8_t shard_size;    // Size of each shard (e.g., 255 bytes)
 } ul_fec_params_t;
 
 /**
  * FEC encoder state
  */
-typedef struct {
+typedef struct
+{
     ul_fec_params_t params;
-    uint8_t *data_shards[16];    // Pointers to data packets
-    uint8_t *parity_shards[16];  // Pointers to generated parity packets
+    uint8_t *data_shards[16];   // Pointers to data packets
+    uint8_t *parity_shards[16]; // Pointers to generated parity packets
     uint8_t shards_received;
     bool initialized;
 } ul_fec_encoder_t;
@@ -103,10 +105,11 @@ typedef struct {
 /**
  * FEC decoder state for reassembly
  */
-typedef struct {
+typedef struct
+{
     ul_fec_params_t params;
-    uint8_t *shards[32];         // Mixed data + parity shards
-    bool shard_present[32];      // Which shards have been received
+    uint8_t *shards[32];    // Mixed data + parity shards
+    bool shard_present[32]; // Which shards have been received
     uint8_t shards_received;
     bool initialized;
 } ul_fec_decoder_t;
@@ -117,8 +120,8 @@ typedef struct {
  * @param data_shards Number of data packets (max 16)
  * @param parity_shards Number of parity packets (max 16)
  */
-void ul_fec_encoder_init(ul_fec_encoder_t *encoder, 
-                        uint8_t data_shards, uint8_t parity_shards);
+void ul_fec_encoder_init(ul_fec_encoder_t *encoder,
+                         uint8_t data_shards, uint8_t parity_shards);
 
 /**
  * Encode data packets to generate parity packets
@@ -128,7 +131,7 @@ void ul_fec_encoder_init(ul_fec_encoder_t *encoder,
  * @param parity_output Output buffer for parity packets
  * @return 0 on success, negative on error
  */
-int ul_fec_encode(ul_fec_encoder_t *encoder, 
+int ul_fec_encode(ul_fec_encoder_t *encoder,
                   const uint8_t *data[], size_t packet_size,
                   uint8_t *parity_output[]);
 
@@ -139,7 +142,7 @@ int ul_fec_encode(ul_fec_encoder_t *encoder,
  * @param parity_shards Number of parity packets
  */
 void ul_fec_decoder_init(ul_fec_decoder_t *decoder,
-                        uint8_t data_shards, uint8_t parity_shards);
+                         uint8_t data_shards, uint8_t parity_shards);
 
 /**
  * Add received shard (data or parity) to decoder
@@ -150,7 +153,7 @@ void ul_fec_decoder_init(ul_fec_decoder_t *decoder,
  * @return 0 if more shards needed, 1 if ready to decode, negative on error
  */
 int ul_fec_add_shard(ul_fec_decoder_t *decoder, uint8_t shard_index,
-                    const uint8_t *shard_data, size_t shard_size);
+                     const uint8_t *shard_data, size_t shard_size);
 
 /**
  * Decode and reconstruct missing shards
@@ -167,21 +170,22 @@ int ul_fec_decode(ul_fec_decoder_t *decoder, uint8_t *output);
 /**
  * Delta encoder for telemetry data
  * Encodes only changes from previous values
- * 
+ *
  * Example: GPS coordinates change slowly, so encode deltas instead of full values
  * - Before: lat=476700000, lat=476700050, lat=476700100 (36 bytes for 3 values)
  * - After:  lat=476700000, delta=+50, delta=+50 (12 bytes)
  * - Savings: 67% reduction
  */
-typedef struct {
+typedef struct
+{
     // Previous values for delta encoding
     ul_heartbeat_t prev_heartbeat;
     ul_attitude_t prev_attitude;
     ul_gps_raw_t prev_gps;
     ul_battery_t prev_battery;
     ul_rc_input_t prev_rc;
-    
-    bool has_previous;  // First packet must send full values
+
+    bool has_previous; // First packet must send full values
     uint32_t packet_count;
 } ul_delta_ctx_t;
 
@@ -200,7 +204,7 @@ void ul_delta_init(ul_delta_ctx_t *ctx);
  * @return Encoded size, or negative on error
  */
 int ul_delta_encode_gps(ul_delta_ctx_t *ctx, const ul_gps_raw_t *gps,
-                       uint8_t *output, size_t max_output);
+                        uint8_t *output, size_t max_output);
 
 /**
  * Decode GPS delta data
@@ -211,7 +215,7 @@ int ul_delta_encode_gps(ul_delta_ctx_t *ctx, const ul_gps_raw_t *gps,
  * @return 0 on success, negative on error
  */
 int ul_delta_decode_gps(ul_delta_ctx_t *ctx, const uint8_t *delta_data,
-                       size_t delta_len, ul_gps_raw_t *gps);
+                        size_t delta_len, ul_gps_raw_t *gps);
 
 /**
  * Encode attitude as delta
@@ -247,7 +251,7 @@ int ul_delta_decode_battery(ul_delta_ctx_t *ctx, const uint8_t *delta_data,
  * - Delta encoding (for telemetry)
  * - FEC parity generation (if enabled)
  * - Plus Phase 1 + 2 (selective encryption, zero-copy, memory pool)
- * 
+ *
  * @param header Message header
  * @param payload Payload data
  * @param payload_len Payload length
@@ -280,7 +284,8 @@ int ul_parse_phase3(const uint8_t *input, size_t input_len,
  * STATISTICS
  * ============================================================================= */
 
-typedef struct {
+typedef struct
+{
     uint32_t packets_compressed;
     uint32_t packets_uncompressed;
     uint32_t bytes_before_compression;

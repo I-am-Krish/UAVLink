@@ -1,4 +1,5 @@
 #include "uavlink_phase2.h"
+#include "uavlink.h"
 #include <string.h>
 #include <stdint.h>
 
@@ -140,8 +141,37 @@ int ul_parse_char_zerocopy(ul_parser_zerocopy_t *parser, uint8_t byte, uint8_t *
 
         if (parser->bytes_received >= 2)
         {
-            // Simplified: assume CRC valid
-            // In real implementation, verify CRC here
+            // Verify CRC over header bytes 1..header_len-1, payload, and MAC (if encrypted)
+            bool crc_encrypted = (parser->header_buf[3] & UL_FLAG_ENCRYPTED) != 0;
+            int header_len = crc_encrypted ? 16 : 8;
+
+            uint16_t crc_in = (uint16_t)parser->header_buf[20] |
+                               ((uint16_t)parser->header_buf[21] << 8);
+            uint16_t crc_calc;
+            ul_crc_init(&crc_calc);
+
+            // Hash header bytes (skip SOF at index 0)
+            for (int i = 1; i < header_len; i++)
+                ul_crc_accumulate(parser->header_buf[i], &crc_calc);
+
+            // Hash payload (ciphertext for encrypted, plaintext for unencrypted)
+            for (int i = 0; i < parser->payload_len; i++)
+                ul_crc_accumulate(parser->output_payload[i], &crc_calc);
+
+            // For encrypted packets, also hash the 16-byte MAC tag
+            if (crc_encrypted)
+            {
+                for (int i = 0; i < 16; i++)
+                    ul_crc_accumulate(parser->cipher_tag[i], &crc_calc);
+            }
+
+            ul_crc_accumulate(ul_get_crc_seed(parser->msg_id), &crc_calc);
+
+            if (crc_in != crc_calc)
+            {
+                ul_parser_zerocopy_init(parser);
+                return UL_ERR_CRC;
+            }
 
             // Success!
             parser->state = 0;
@@ -369,10 +399,9 @@ int ul_parse_char_fast(ul_parser_zerocopy_t *parser, uint8_t byte, ul_mempool_t 
 
     if (result == 1)
     {
-        // Complete packet - reset output pointer but DON'T free (caller must free)
-        parser->output_payload = NULL;
-        // Store pointer somewhere accessible to caller, or return it differently
-        // For now, caller must track the buffer
+        // Complete packet — save completed buffer pointer for caller BEFORE clearing output_payload
+        parser->last_payload = parser->output_payload;
+        parser->output_payload = NULL; // Ready for next packet allocation
     }
     else if (result < 0)
     {

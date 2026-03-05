@@ -5,8 +5,8 @@
 #include <stdbool.h>
 
 /* Protocol Constants */
-#define UL_MAX_PAYLOAD_SIZE 512  /* Maximum payload size in parser buffer */
-#define UL_MAC_TAG_SIZE 16       /* Poly1305 MAC tag size (full 128-bit) */
+#define UL_MAX_PAYLOAD_SIZE 512 /* Maximum payload size in parser buffer */
+#define UL_MAC_TAG_SIZE 16      /* Poly1305 MAC tag size (full 128-bit) */
 
 /* Error Codes */
 typedef enum
@@ -89,7 +89,7 @@ typedef struct
 #define UL_MSG_BATTERY 0x004
 #define UL_MSG_RC_INPUT 0x005
 #define UL_MSG_CMD 0x006
-#define UL_MSG_BATCH 0x3FF  /* Special message ID for message batching */
+#define UL_MSG_BATCH 0x3FF /* Special message ID for message batching */
 
 /* --- OPTIMIZATION: Selective Encryption Policies --- */
 typedef enum
@@ -119,7 +119,7 @@ typedef struct
 
     // Extracted payload fields
     ul_header_t header;
-    uint8_t payload[256];
+    uint8_t payload[512]; // Must match buffer[512] to prevent overflow
 } ul_parser_t;
 
 /* --- Nonce State Management (for secure encryption) --- */
@@ -134,9 +134,9 @@ typedef struct
 /* --- OPTIMIZATION: Crypto Context Caching --- */
 typedef struct
 {
-    uint8_t last_key[32];  /* Last key used for caching */
-    uint8_t valid;         /* 1 if cache is valid, 0 otherwise */
-    uint8_t reserved[3];   /* Padding for alignment */
+    uint8_t last_key[32]; /* Last key used for caching */
+    uint8_t valid;        /* 1 if cache is valid, 0 otherwise */
+    uint8_t reserved[3];  /* Padding for alignment */
 } ul_crypto_ctx_t;
 
 /* --- OPTIMIZATION: Message Batching --- */
@@ -144,14 +144,14 @@ typedef struct
 
 typedef struct
 {
-    uint16_t msg_id;      /* Message ID */
-    uint8_t length;       /* Payload length */
-    uint8_t data[64];     /* Message data (max 64 bytes per message) */
+    uint16_t msg_id;  /* Message ID */
+    uint8_t length;   /* Payload length */
+    uint8_t data[64]; /* Message data (max 64 bytes per message) */
 } ul_batch_msg_t;
 
 typedef struct
 {
-    uint8_t num_messages;                        /* Number of messages in batch */
+    uint8_t num_messages;                           /* Number of messages in batch */
     ul_batch_msg_t messages[UL_BATCH_MAX_MESSAGES]; /* Array of batched messages */
 } ul_batch_t;
 
@@ -241,6 +241,7 @@ int ul_deserialize_rc_input(ul_rc_input_t *rc, const uint8_t *payload_buf);
 /* CRC Computations */
 void ul_crc_init(uint16_t *crcAccum);
 void ul_crc_accumulate(uint8_t data, uint16_t *crcAccum);
+uint8_t ul_get_crc_seed(uint16_t msg_id);
 
 /* Encode the base 4-byte header */
 void ul_encode_base_header(uint8_t *buf, const ul_header_t *h);

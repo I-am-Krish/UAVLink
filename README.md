@@ -20,30 +20,30 @@ UAVLink is a high-performance binary communication protocol purpose-built for UA
 
 ### 🚀 Performance Summary
 
-| Metric | Baseline | Optimized | Improvement |
-|--------|----------|-----------|-------------|
-| **Bandwidth** | 3.68 kbps | 0.63 kbps | **82.8% reduction** |
-| **Parse Speed** | 250 µs | 125 µs | **2x faster** |
-| **Crypto Speed** | 200 µs | 50 µs | **4x faster** (ARM NEON) |
-| **Memory Alloc** | 50 µs | <1 µs | **50x faster** (O(1) pool) |
-| **Total Latency** | 500 µs | 176 µs | **2.8x faster** |
+| Metric            | Baseline  | Optimized | Improvement                |
+| ----------------- | --------- | --------- | -------------------------- |
+| **Bandwidth**     | 3.68 kbps | 0.63 kbps | **82.8% reduction**        |
+| **Parse Speed**   | 250 µs    | 125 µs    | **2x faster**              |
+| **Crypto Speed**  | 200 µs    | 50 µs     | **4x faster** (ARM NEON)   |
+| **Memory Alloc**  | 50 µs     | <1 µs     | **50x faster** (O(1) pool) |
+| **Total Latency** | 500 µs    | 176 µs    | **2.8x faster**            |
 
 ### 📊 Test Coverage
 
 **33 Tests | 100% Pass Rate**
 
-| Category | Tests | Focus |
-|----------|-------|-------|
-| Serialization/Deserialization | 5 | Message packing/unpacking round-trips |
-| AEAD Encryption | 1 | ChaCha20-Poly1305 encrypt/decrypt |
-| MAC Verification | 3 | Tamper detection (payload, header, wrong key) |
-| Parser State Machine | 3 | Multi-packet streams, CRC, SOF handling |
-| Error Handling | 2 | NULL pointers, buffer overflow protection |
-| CRC | 2 | Known vectors, empty messages |
-| Nonce Management | 4 | Initialization, uniqueness, counter tracking |
-| Replay Protection | 5 | Sequence tracking, duplicates, rollover |
-| Fragmentation | 5 | Fragment encoding, multi-part messages |
-| Edge Cases | 3 | Zero-length payloads, max sequence, priorities |
+| Category                      | Tests | Focus                                          |
+| ----------------------------- | ----- | ---------------------------------------------- |
+| Serialization/Deserialization | 5     | Message packing/unpacking round-trips          |
+| AEAD Encryption               | 1     | ChaCha20-Poly1305 encrypt/decrypt              |
+| MAC Verification              | 3     | Tamper detection (payload, header, wrong key)  |
+| Parser State Machine          | 3     | Multi-packet streams, CRC, SOF handling        |
+| Error Handling                | 2     | NULL pointers, buffer overflow protection      |
+| CRC                           | 2     | Known vectors, empty messages                  |
+| Nonce Management              | 4     | Initialization, uniqueness, counter tracking   |
+| Replay Protection             | 5     | Sequence tracking, duplicates, rollover        |
+| Fragmentation                 | 5     | Fragment encoding, multi-part messages         |
+| Edge Cases                    | 3     | Zero-length payloads, max sequence, priorities |
 
 **Run tests:** `wsl make test` (Windows) or `make test` (Linux/macOS)
 
@@ -52,6 +52,7 @@ UAVLink is a high-performance binary communication protocol purpose-built for UA
 ## Features
 
 ### Core Protocol
+
 ✅ **Compact Headers** - 8-16 byte headers with bit-packed fields  
 ✅ **Built-in Encryption** - ChaCha20-Poly1305 AEAD with full 128-bit MAC authentication  
 ✅ **Reliable** - CRC-16 integrity checking plus AEAD MAC prevents tampering  
@@ -62,6 +63,7 @@ UAVLink is a high-performance binary communication protocol purpose-built for UA
 ✅ **Production-Ready** - Secure nonce generation prevents replay attacks
 
 ### Phase 2 Performance Optimizations
+
 ✅ **Zero-Copy Parser** - 2x parsing speed with direct memory access  
 ✅ **Memory Pool** - O(1) deterministic allocation for real-time systems  
 ✅ **Hardware Crypto Detection** - Automatic SIMD backend selection  
@@ -69,6 +71,7 @@ UAVLink is a high-performance binary communication protocol purpose-built for UA
 ✅ **Selective Encryption** - 60% bandwidth reduction for public telemetry
 
 ### Phase 3 Advanced Features
+
 ✅ **Delta Encoding** - 57% bandwidth savings for GPS/attitude telemetry  
 ✅ **LZ4 Compression** - Fast compression for repetitive data  
 ✅ **Reed-Solomon FEC** - Recover from packet loss without retransmission  
@@ -82,41 +85,47 @@ UAVLink is a high-performance binary communication protocol purpose-built for UA
 ### Files
 
 #### Core Protocol
-| File | Description |
-|------|-------------|
-| `Protocol/uavlink.h` | Core API, structures, and constants |
-| `Protocol/uavlink.c` | Encoding/decoding implementation with AEAD |
+
+| File                      | Description                                     |
+| ------------------------- | ----------------------------------------------- |
+| `Protocol/uavlink.h`      | Core API, structures, and constants             |
+| `Protocol/uavlink.c`      | Encoding/decoding implementation with AEAD      |
 | `Protocol/monocypher.c/h` | Portable ChaCha20-Poly1305 cryptography library |
 
 #### Phase 2 Optimizations
-| File | Description |
-|------|-------------|
-| `Protocol/uavlink_phase2.h` | Zero-copy parser, memory pool APIs |
+
+| File                        | Description                              |
+| --------------------------- | ---------------------------------------- |
+| `Protocol/uavlink_phase2.h` | Zero-copy parser, memory pool APIs       |
 | `Protocol/uavlink_phase2.c` | Performance optimization implementations |
 
 #### Phase 3 Advanced Features
-| File | Description |
-|------|-------------|
-| `Protocol/uavlink_phase3.h` | Delta encoding, LZ4, FEC APIs |
+
+| File                        | Description                         |
+| --------------------------- | ----------------------------------- |
+| `Protocol/uavlink_phase3.h` | Delta encoding, LZ4, FEC APIs       |
 | `Protocol/uavlink_phase3.c` | Compression and FEC implementations |
 
 #### Hardware Acceleration
-| File | Description |
-|------|-------------|
+
+| File                           | Description                    |
+| ------------------------------ | ------------------------------ |
 | `Protocol/uavlink_hw_crypto.h` | ARM NEON, x86 SIMD crypto APIs |
-| `Protocol/uavlink_hw_crypto.c` | Hardware-accelerated ChaCha20 |
+| `Protocol/uavlink_hw_crypto.c` | Hardware-accelerated ChaCha20  |
 
 #### Testing & Examples
-| File | Description |
-|------|-------------|
-| `Protocol/uavlink_benchmark.c` | Performance profiler (1000 iterations) |
-| `Protocol/gcs_receiver_phase2.c` | Network receiver demo with Phase 2 optimizations |
-| `Protocol/uav_simulator_phase2_network.c` | Network transmitter demo |
-| `Protocol/IMPLEMENTATION_SUMMARY.md` | Complete technical documentation |
+
+| File                                      | Description                                      |
+| ----------------------------------------- | ------------------------------------------------ |
+| `Protocol/uavlink_benchmark.c`            | Performance profiler (1000 iterations)           |
+| `Protocol/gcs_receiver_phase2.c`          | Network receiver demo with Phase 2 optimizations |
+| `Protocol/uav_simulator_phase2_network.c` | Network transmitter demo                         |
+| `Protocol/IMPLEMENTATION_SUMMARY.md`      | Complete technical documentation                 |
 
 ### Compiling and Testing
 
 **Option 1: Run Performance Benchmark (Shows All Optimizations)**
+
 ```bash
 cd Protocol
 gcc -o uavlink_benchmark.exe uavlink_benchmark.c uavlink.c \
@@ -125,6 +134,7 @@ gcc -o uavlink_benchmark.exe uavlink_benchmark.c uavlink.c \
 ```
 
 Expected output:
+
 ```
 Phase 2 zero-copy: 6.17x parse speedup
 Phase 3 delta encoding: 57% bandwidth savings
@@ -133,6 +143,7 @@ Memory pool: Zero leaks confirmed
 ```
 
 **Option 2: Network Test (Transmitter + Receiver)**
+
 ```bash
 cd Protocol
 # Terminal 1: Start receiver
@@ -145,6 +156,7 @@ cd Protocol
 Expected: 234 packets transmitted successfully over 20 seconds
 
 **Option 3: Compile with Hardware Acceleration**
+
 ```bash
 # ARM NEON build (4x crypto speedup)
 gcc -o uavlink_test test.c uavlink.c uavlink_phase2.o uavlink_phase3.o \
@@ -158,13 +170,14 @@ gcc -o uavlink_test test.c uavlink.c uavlink_phase2.o uavlink_phase3.o \
 ### Expected Output
 
 **Benchmark (`uavlink_benchmark.exe`):**
+
 ```
 ================================================================================
 BENCHMARK RESULTS
 ================================================================================
 
-Test                 Pack (µs)      Parse (µs)     Bytes        Total (µs)   
--------------------- --------------- --------------- ------------ ------------  
+Test                 Pack (µs)      Parse (µs)     Bytes        Total (µs)
+-------------------- --------------- --------------- ------------ ------------
 Baseline            Pack:      0 µs  Parse:      1 µs  Bytes:    41  Total:     1 µs
 Phase 1             Pack:    152 µs  Parse:      1 µs  Bytes:    41  Total:   154 µs
 Phase 2             Pack:    110 µs  Parse:      0 µs  Bytes:    41  Total:   110 µs
@@ -190,6 +203,7 @@ RECOMMENDATIONS:
 ```
 
 **Network Test:**
+
 ```
 === UAVLink Phase 2 UAV Simulator (Network) ===
 
@@ -216,62 +230,64 @@ To add UAVLink to your flight controller or ground station:
    - Hardware: `uavlink_hw_crypto.h`, `uavlink_hw_crypto.c` (optional, for SIMD)
 
 2. **Basic Usage (Baseline Protocol):**
+
    ```c
    #include "uavlink.h"
-   
+
    // Initialize parser
    ul_parser_t parser;
    ul_parser_init(&parser);
-   
+
    // Feed bytes in UART/serial loop
    uint8_t incoming_byte = uart_read();
    int result = ul_parse_char(&parser, incoming_byte, encryption_key);
-   
+
    if (result == UL_OK) {
        // Full packet received!
        handle_message(&parser.header, parser.payload);
    }
-   
+
    // Send packets
    ul_attitude_t att = {.roll = 0.1f, .pitch = 0.2f, .yaw = 1.5f, ...};
    uint8_t payload[32];
    int payload_len = ul_serialize_attitude(&att, payload);
-   
+
    ul_header_t header = {
        .payload_len = payload_len,
        .encrypted = true,
        .msg_id = UL_MSG_ATTITUDE,
        // ... set other fields
    };
-   
+
    uint8_t packet[256];
    int packet_len = uavlink_pack(packet, &header, payload, encryption_key);
    uart_transmit(packet, packet_len);
    ```
 
 3. **Phase 2 Optimized Usage (2x faster parsing, O(1) allocation):**
+
    ```c
    #include "uavlink.h"
    #include "uavlink_phase2.h"
-   
+
    // Initialize memory pool (once at startup)
    ul_mempool_t pool;
    ul_mempool_init(&pool);
-   
+
    // Initialize zero-copy parser (once per connection)
    ul_parser_zerocopy_t parser;
    ul_parser_zerocopy_init(&parser);
-   
+
    // Fast parsing with zero-copy
    uint8_t incoming_byte = uart_read();
    uint8_t *payload_ptr;
    int result = ul_parse_char_zerocopy(&parser, incoming_byte, encryption_key, &payload_ptr);
-   
+
    if (result == UL_OK) {
        // Payload pointer directly to received data (no copy!)
        handle_message(&parser.header, payload_ptr);
    }
-   
+
    // Fast packing with memory pool + crypto cache
    uint8_t *buffer = ul_mempool_alloc(&pool);  // O(1) allocation
    int packet_len = ul_pack_fast(buffer, &header, payload, encryption_key, &pool);
@@ -280,19 +296,20 @@ To add UAVLink to your flight controller or ground station:
    ```
 
 4. **Phase 3 Advanced Usage (57% bandwidth savings for telemetry):**
+
    ```c
    #include "uavlink_phase3.h"
-   
+
    // Initialize delta encoder (once at startup)
    ul_delta_ctx_t delta_ctx;
    ul_delta_init(&delta_ctx);
-   
+
    // Encode GPS with delta compression
    ul_gps_t gps = {.lat = 37.7749, .lon = -122.4194, .alt = 50.0f, ...};
    uint8_t encoded[64];
    int len = ul_delta_encode_gps(&delta_ctx, &gps, encoded, sizeof(encoded));
    // First packet: 28 bytes, subsequent: 12 bytes (57% savings!)
-   
+
    // Decode on receiver side
    ul_delta_ctx_t rx_delta_ctx;
    ul_delta_init(&rx_delta_ctx);
@@ -301,12 +318,13 @@ To add UAVLink to your flight controller or ground station:
    ```
 
 5. **Hardware Acceleration (4x crypto speedup on ARM/x86):**
+
    ```c
    #include "uavlink_hw_crypto.h"
-   
+
    // Enable hardware crypto at startup (automatic backend selection)
    ul_enable_hardware_crypto();
-   
+
    // All crypto operations now use NEON/AVX2 automatically
    // No code changes needed - transparent acceleration!
    int packet_len = uavlink_pack(buffer, &header, payload, encryption_key);
@@ -328,6 +346,7 @@ To add UAVLink to your flight controller or ground station:
 ```
 
 **Packet Size Range:**
+
 - **Minimum:** 10 bytes (empty payload, no encryption)
 - **Maximum:** 4,122 bytes (4095-byte payload + full headers)
 - **Typical:** 26-50 bytes (common telemetry messages)
@@ -342,23 +361,23 @@ To add UAVLink to your flight controller or ground station:
   0xA5                    Extended Header      0-4095B    16B     2B
 ```
 
-| Byte Index | Content | Value | Explanation |
-|------------|---------|-------|-------------|
-| 0 | Packet start sign | `0xA5` | Indicates the start of a new UAVLink packet |
-| 1 | Payload length [11:8] + Priority + Stream type [3:2] | Bits 7-4: Payload length upper nibble (0-15)<br>Bits 3-2: Priority (00=Bulk, 01=Normal, 10=High, 11=Emergency)<br>Bits 1-0: Stream type upper 2 bits | Bit-packed field combining 12-bit payload length MSBs, message priority for QoS, and stream type classification |
-| 2 | Payload length [7:0] | 0 - 255 | Lower 8 bits of payload length. Combined with byte 1 allows payloads up to 4095 bytes |
-| 3 | Flags + Stream type [1:0] + Sequence [5:2] | Bits 7-6: Flags (encrypted, fragmented)<br>Bits 5-4: Stream type lower bits<br>Bits 3-0: Sequence upper nibble | Encrypted flag, fragmentation flag, stream type completion, and sequence number upper bits for packet ordering |
-| 4 | Sequence [1:0] + Message ID [5:0] | Bits 7-6: Sequence lower 2 bits<br>Bits 5-0: Message ID upper 6 bits | 6-bit rolling sequence counter (0-63) detects packet loss. Message ID upper bits define payload type |
-| 5 | Message ID [1:0] + Header CRC-16 [15:10] | Bits 7-6: Message ID lower 2 bits<br>Bits 5-0: CRC upper 6 bits | 8-bit Message ID (0-255) defines payload structure. Header CRC-16 upper bits protect base header integrity |
-| 6 to 7 | Header CRC-16 [9:0] | 16-bit checksum | CRC-16 (ITU X.25 polynomial) protecting bytes 0-5 from corruption. Computed excluding packet start sign |
-| 8 | System ID | 1 - 255 | ID of the SENDING system. Allows differentiation of multiple UAVs on the same network |
-| 9 | Component ID | 0 - 255 | ID of the SENDING component. Allows differentiation of different components of the same system (e.g., autopilot, gimbal, companion computer) |
-| 10 | Target System ID | 0 - 255 | ID of the RECEIVING system. Value 0 = broadcast to all systems |
-| 11 | Target Component ID | 0 - 255 | ID of the RECEIVING component. Value 0 = broadcast to all components |
-| 12 to 19 | Nonce (if encrypted) | 64-bit value | 8-byte nonce for ChaCha20-Poly1305 AEAD encryption. Cryptographically secure random value. **Only present when encrypted flag is set** |
-| 20 to (n+19) or (n+11) | Data | (0 - 4095) bytes | Data of the message, depends on the message ID. Payload can be encrypted with ChaCha20-Poly1305 |
-| (n+20) or (n+12) to (n+35) or (n+27) | Poly1305 MAC (if encrypted) | 128-bit tag | 16-byte authentication tag from ChaCha20-Poly1305 AEAD. Authenticates header + payload. **Only present when encrypted flag is set** |
-| (n+20) or (n+12) or (n+36) or (n+28) to final | Checksum (low byte, high byte) | ITU X.25/SAE AS-4 hash | CRC-16 covering entire packet excluding this checksum field. Protects the packet from corruption. **Always final 2 bytes of packet** |
+| Byte Index                                    | Content                                              | Value                                                                                                                                                | Explanation                                                                                                                                  |
+| --------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0                                             | Packet start sign                                    | `0xA5`                                                                                                                                               | Indicates the start of a new UAVLink packet                                                                                                  |
+| 1                                             | Payload length [11:8] + Priority + Stream type [3:2] | Bits 7-4: Payload length upper nibble (0-15)<br>Bits 3-2: Priority (00=Bulk, 01=Normal, 10=High, 11=Emergency)<br>Bits 1-0: Stream type upper 2 bits | Bit-packed field combining 12-bit payload length MSBs, message priority for QoS, and stream type classification                              |
+| 2                                             | Payload length [7:0]                                 | 0 - 255                                                                                                                                              | Lower 8 bits of payload length. Combined with byte 1 allows payloads up to 4095 bytes                                                        |
+| 3                                             | Flags + Stream type [1:0] + Sequence [5:2]           | Bits 7-6: Flags (encrypted, fragmented)<br>Bits 5-4: Stream type lower bits<br>Bits 3-0: Sequence upper nibble                                       | Encrypted flag, fragmentation flag, stream type completion, and sequence number upper bits for packet ordering                               |
+| 4                                             | Sequence [1:0] + Message ID [5:0]                    | Bits 7-6: Sequence lower 2 bits<br>Bits 5-0: Message ID upper 6 bits                                                                                 | 6-bit rolling sequence counter (0-63) detects packet loss. Message ID upper bits define payload type                                         |
+| 5                                             | Message ID [1:0] + Header CRC-16 [15:10]             | Bits 7-6: Message ID lower 2 bits<br>Bits 5-0: CRC upper 6 bits                                                                                      | 8-bit Message ID (0-255) defines payload structure. Header CRC-16 upper bits protect base header integrity                                   |
+| 6 to 7                                        | Header CRC-16 [9:0]                                  | 16-bit checksum                                                                                                                                      | CRC-16 (ITU X.25 polynomial) protecting bytes 0-5 from corruption. Computed excluding packet start sign                                      |
+| 8                                             | System ID                                            | 1 - 255                                                                                                                                              | ID of the SENDING system. Allows differentiation of multiple UAVs on the same network                                                        |
+| 9                                             | Component ID                                         | 0 - 255                                                                                                                                              | ID of the SENDING component. Allows differentiation of different components of the same system (e.g., autopilot, gimbal, companion computer) |
+| 10                                            | Target System ID                                     | 0 - 255                                                                                                                                              | ID of the RECEIVING system. Value 0 = broadcast to all systems                                                                               |
+| 11                                            | Target Component ID                                  | 0 - 255                                                                                                                                              | ID of the RECEIVING component. Value 0 = broadcast to all components                                                                         |
+| 12 to 19                                      | Nonce (if encrypted)                                 | 64-bit value                                                                                                                                         | 8-byte nonce for ChaCha20-Poly1305 AEAD encryption. Cryptographically secure random value. **Only present when encrypted flag is set**       |
+| 20 to (n+19) or (n+11)                        | Data                                                 | (0 - 4095) bytes                                                                                                                                     | Data of the message, depends on the message ID. Payload can be encrypted with ChaCha20-Poly1305                                              |
+| (n+20) or (n+12) to (n+35) or (n+27)          | Poly1305 MAC (if encrypted)                          | 128-bit tag                                                                                                                                          | 16-byte authentication tag from ChaCha20-Poly1305 AEAD. Authenticates header + payload. **Only present when encrypted flag is set**          |
+| (n+20) or (n+12) or (n+36) or (n+28) to final | Checksum (low byte, high byte)                       | ITU X.25/SAE AS-4 hash                                                                                                                               | CRC-16 covering entire packet excluding this checksum field. Protects the packet from corruption. **Always final 2 bytes of packet**         |
 
 **Note:** The nonce (bytes 12-19) and MAC tag (16 bytes before final CRC) are only present when the encrypted flag is set in byte 3, bit 7. This makes encrypted packets 24 bytes larger than unencrypted packets.
 
@@ -367,10 +386,12 @@ To add UAVLink to your flight controller or ground station:
 The base header is densely bit-packed to minimize overhead:
 
 **Byte 0: Start of Frame (SOF)**
+
 - Fixed value: `0xA5`
 - Purpose: Synchronization marker for frame detection
 
 **Byte 1: Payload Length [11:8] | Priority | Stream Type [3:2]**
+
 ```
 Bits 7-4: Payload length upper 4 bits
 Bits 3-2: Priority (00=Bulk, 01=Normal, 10=High, 11=Emergency)
@@ -378,12 +399,14 @@ Bits 1-0: Stream type upper 2 bits
 ```
 
 **Byte 2: Stream Type [1:0] | Payload Length [7:2]**
+
 ```
 Bits 7-6: Stream type lower 2 bits
 Bits 5-0: Payload length middle 6 bits
 ```
 
 **Byte 3: Payload Length [1:0] | Encrypted | Fragmented | Sequence [11:8]**
+
 ```
 Bits 7-6: Payload length lower 2 bits
 Bit 5:    Encrypted flag (1 = encrypted with AEAD)
@@ -401,12 +424,14 @@ Bits 3-0: Sequence number upper 4 bits
 The extended header contains routing and message identification:
 
 **Always Present (4 bytes):**
+
 - **Sequence Number (1 byte)** - Lower 8 bits (combined with base header for 12-bit total)
 - **System ID (1 byte)** - Source UAV/GCS identifier
 - **Component ID (1 byte)** - Source component (autopilot, gimbal, etc.)
 - **Message ID (1 byte)** - Message type identifier
 
 **Conditional Fields:**
+
 - **Target System ID (1 byte)** - Only if not broadcast (0xFF = broadcast)
 - **Fragmentation Info (2 bytes)** - Only if fragmented flag set
   - Fragment Index (1 byte): Which fragment (0-based)
@@ -415,31 +440,32 @@ The extended header contains routing and message identification:
   - 64-bit hybrid counter+random for replay protection
 
 **Total Extended Header Size:**
+
 - Minimum: 4 bytes (broadcast, no fragmentation, no encryption)
 - Maximum: 13 bytes (targeted, fragmented, encrypted)
 
 ### Stream Types (4-bit)
 
-| ID | Stream Name | Purpose |
-|----|-------------|---------|
-| 0 | Heartbeat | System status, keepalive |
-| 1 | Telemetry | UAV state (attitude, position, velocity) |
-| 2 | Command | Control commands (arm, disarm, mission) |
-| 3 | Parameter | Configuration management |
-| 4 | Mission | Waypoint upload/download |
-| 5 | Sensor Raw | Unprocessed sensor readings |
-| 6 | RC | Radio control inputs |
-| 7 | Log | On-board logging data |
-| 8-15 | Reserved | Future use |
+| ID   | Stream Name | Purpose                                  |
+| ---- | ----------- | ---------------------------------------- |
+| 0    | Heartbeat   | System status, keepalive                 |
+| 1    | Telemetry   | UAV state (attitude, position, velocity) |
+| 2    | Command     | Control commands (arm, disarm, mission)  |
+| 3    | Parameter   | Configuration management                 |
+| 4    | Mission     | Waypoint upload/download                 |
+| 5    | Sensor Raw  | Unprocessed sensor readings              |
+| 6    | RC          | Radio control inputs                     |
+| 7    | Log         | On-board logging data                    |
+| 8-15 | Reserved    | Future use                               |
 
 ### Priority Levels
 
-| Level | Code | Latency | Use Case |
-|-------|------|---------|----------|
-| Bulk | 00 | ~1000ms | Logs, parameter lists |
-| Normal | 01 | ~100ms | Telemetry, status updates |
-| High | 10 | ~20ms | Commands, waypoints |
-| Emergency | 11 | <10ms | Failsafe, critical alerts |
+| Level     | Code | Latency | Use Case                  |
+| --------- | ---- | ------- | ------------------------- |
+| Bulk      | 00   | ~1000ms | Logs, parameter lists     |
+| Normal    | 01   | ~100ms  | Telemetry, status updates |
+| High      | 10   | ~20ms   | Commands, waypoints       |
+| Emergency | 11   | <10ms   | Failsafe, critical alerts |
 
 ---
 
@@ -460,6 +486,7 @@ The extended header contains routing and message identification:
 | base_mode | uint8 | 1 | Armed/disarmed, manual/auto mode flags |
 
 **Example:**
+
 ```c
 ul_heartbeat_t hb = {
     .system_status = 0x12345678,
@@ -488,9 +515,10 @@ ul_serialize_heartbeat(&hb, payload);
 | pitchspeed | float | 2* | Pitch rate (rad/s), compressed to float16 |
 | yawspeed | float | 2* | Yaw rate (rad/s), compressed to float16 |
 
-*Uses float16 compression for 50% size reduction
+\*Uses float16 compression for 50% size reduction
 
 **Example:**
+
 ```c
 ul_attitude_t att = {
     .roll = 0.523f,       // ~30 degrees
@@ -514,8 +542,8 @@ ul_serialize_attitude(&att, payload);
 **Fields:**
 | Field | Type | Size | Description |
 |-------|------|------|-------------|
-| lat | int32 | 4 | Latitude (deg * 1e7) |
-| lon | int32 | 4 | Longitude (deg * 1e7) |
+| lat | int32 | 4 | Latitude (deg _ 1e7) |
+| lon | int32 | 4 | Longitude (deg _ 1e7) |
 | alt | int32 | 4 | Altitude AMSL (mm) |
 | eph | uint16 | 2 | GPS horizontal accuracy (cm) |
 | epv | uint16 | 2 | GPS vertical accuracy (cm) |
@@ -525,6 +553,7 @@ ul_serialize_attitude(&att, payload);
 | satellites | uint8 | 1 | Number of satellites visible |
 
 **Example:**
+
 ```c
 ul_gps_raw_t gps = {
     .lat = 474977810,      // 47.4977810° (Seattle)
@@ -558,6 +587,7 @@ ul_serialize_gps_raw(&gps, payload);
 | status | uint8 | 1 | Status flags (charging, critical, etc.) |
 
 **Example:**
+
 ```c
 ul_battery_t bat = {
     .voltage = 16800,      // 16.8V (4S LiPo fully charged)
@@ -585,6 +615,7 @@ ul_serialize_battery(&bat, payload);
 | quality | uint8 | 1 | Link quality (0-100%) |
 
 **Example:**
+
 ```c
 ul_rc_input_t rc = {
     .channels = {1500, 1600, 1400, 1500, 1800, 1200, 1500, 1500},
@@ -605,12 +636,15 @@ ul_serialize_rc_input(&rc, payload);
 ```c
 void ul_parser_init(ul_parser_t *p);
 ```
+
 Initialize parser state machine. Call once before first use.
 
 **Parameters:**
+
 - `p` - Pointer to parser structure
 
 **Example:**
+
 ```c
 ul_parser_t parser;
 ul_parser_init(&parser);
@@ -624,16 +658,19 @@ void ul_nonce_generate(ul_nonce_state_t *state, uint8_t nonce_8b[8]);
 ```
 
 **Nonce Initialization:**
+
 - Initializes hybrid counter+random nonce generator
 - Counter starts at cryptographically random value
 - Call once at system startup
 
 **Nonce Generation:**
+
 - Generates unique 8-byte nonce for each encrypted packet
 - Format: 4-byte counter + 4-byte random
 - Automatically increments counter
 
 **Example:**
+
 ```c
 ul_nonce_state_t nonce_state;
 ul_nonce_init(&nonce_state);
@@ -645,7 +682,7 @@ ul_nonce_generate(&nonce_state, nonce);  // Use for next packet
 ### Packet Packing
 
 ```c
-int uavlink_pack(uint8_t *buf, const ul_header_t *h, 
+int uavlink_pack(uint8_t *buf, const ul_header_t *h,
                  const uint8_t *payload, const uint8_t *key_32b);
 
 int uavlink_pack_with_nonce(uint8_t *buf, const ul_header_t *h,
@@ -654,21 +691,25 @@ int uavlink_pack_with_nonce(uint8_t *buf, const ul_header_t *h,
 ```
 
 **Pack Packet:**
+
 - Assembles complete packet with headers, encryption, MAC, CRC
 - If `key_32b` is NULL, packet is unencrypted
 - Returns packet length in bytes, or negative error code
 
 **Pack with Nonce State:**
+
 - Same as `uavlink_pack()` but auto-generates nonce
 - Recommended for production use
 - Ensures nonce uniqueness across packets
 
 **Returns:**
+
 - Positive: Packet length (bytes)
 - `UL_ERR_NULL_POINTER` - Invalid pointer
 - `UL_ERR_BUFFER_OVERFLOW` - Payload too large (>512 bytes)
 
 **Example:**
+
 ```c
 ul_header_t header = {
     .payload_len = 12,
@@ -693,11 +734,13 @@ int ul_parse_char(ul_parser_t *p, uint8_t c, const uint8_t *key_32b);
 ```
 
 **Parse Single Byte:**
+
 - Feed bytes one-at-a-time from UART/serial
 - State machine automatically handles framing, CRC, MAC verification
 - Returns status code after each byte
 
 **Returns:**
+
 - `UL_OK` (0) - Packet complete and valid
 - `1` - Still parsing, need more bytes
 - `UL_ERR_CRC` - CRC mismatch
@@ -705,6 +748,7 @@ int ul_parse_char(ul_parser_t *p, uint8_t c, const uint8_t *key_32b);
 - `UL_ERR_NO_KEY` - Encrypted packet but no key provided
 
 **Example:**
+
 ```c
 ul_parser_t parser;
 ul_parser_init(&parser);
@@ -712,12 +756,12 @@ ul_parser_init(&parser);
 while (uart_available()) {
     uint8_t byte = uart_read();
     int result = ul_parse_char(&parser, byte, encryption_key);
-    
+
     if (result == UL_OK) {
         // Packet complete!
         printf("Received msg_id=0x%03X from sys=%d\n",
                parser.header.msg_id, parser.header.sys_id);
-        
+
         // Decode payload based on msg_id
         if (parser.header.msg_id == UL_MSG_ATTITUDE) {
             ul_attitude_t att;
@@ -742,12 +786,14 @@ int ul_serialize_rc_input(const ul_rc_input_t *msg, uint8_t *out);
 ```
 
 **Serialization:**
+
 - Converts struct to packed byte array
 - Handles endianness (little-endian)
 - Float16 compression where appropriate
 - Returns payload size in bytes
 
 **Returns:**
+
 - Positive: Payload size (bytes)
 - `UL_ERR_NULL_POINTER` - Invalid pointer
 
@@ -762,12 +808,14 @@ int ul_deserialize_rc_input(ul_rc_input_t *msg, const uint8_t *in);
 ```
 
 **Deserialization:**
+
 - Converts packed byte array back to struct
 - Reverses endianness conversion
 - Float16 decompression where needed
 - Returns bytes consumed
 
 **Returns:**
+
 - Positive: Bytes consumed
 - `UL_ERR_NULL_POINTER` - Invalid pointer
 
@@ -829,6 +877,7 @@ The protocol now features production-grade authenticated encryption:
    - CRC-16 computed after MAC tag for transmission error detection
 
 **Security Posture:**
+
 - ✅ No replay attacks (hybrid nonce strategy)
 - ✅ No tampering (AEAD MAC verification)
 - ✅ No bit-flip attacks (CRC-16 + Poly1305)
@@ -1014,18 +1063,18 @@ In `uavlink.c`:
 ```c
 int ul_serialize_your_message(const ul_your_message_t *msg, uint8_t *out) {
     if (!msg || !out) return UL_ERR_NULL_POINTER;
-    
+
     int offset = 0;
-    
+
     pack_uint32(&out[offset], msg->timestamp);
     offset += 4;
-    
+
     pack_float(&out[offset], msg->temperature);
     offset += 4;
-    
+
     out[offset] = msg->status;
     offset += 1;
-    
+
     return offset;  // Return total size (9 bytes)
 }
 ```
@@ -1037,18 +1086,18 @@ In `uavlink.c`:
 ```c
 int ul_deserialize_your_message(ul_your_message_t *msg, const uint8_t *in) {
     if (!msg || !in) return UL_ERR_NULL_POINTER;
-    
+
     int offset = 0;
-    
+
     msg->timestamp = unpack_uint32(&in[offset]);
     offset += 4;
-    
+
     msg->temperature = unpack_float(&in[offset]);
     offset += 4;
-    
+
     msg->status = in[offset];
     offset += 1;
-    
+
     return offset;  // Return bytes consumed
 }
 ```
@@ -1081,21 +1130,23 @@ printf("✓ Round-trip test passed!\n");
 
 ### Packet Overhead
 
-| Scenario | Header | MAC | CRC | Total Overhead |
-|----------|--------|-----|-----|----------------|
-| Unencrypted broadcast | 8 bytes | 0 | 2 | 10 bytes |
-| Encrypted broadcast | 16 bytes | 16 | 2 | 34 bytes |
-| Encrypted targeted | 17 bytes | 16 | 2 | 35 bytes |
-| Encrypted fragmented | 19 bytes | 16 | 2 | 37 bytes |
+| Scenario              | Header   | MAC | CRC | Total Overhead |
+| --------------------- | -------- | --- | --- | -------------- |
+| Unencrypted broadcast | 8 bytes  | 0   | 2   | 10 bytes       |
+| Encrypted broadcast   | 16 bytes | 16  | 2   | 34 bytes       |
+| Encrypted targeted    | 17 bytes | 16  | 2   | 35 bytes       |
+| Encrypted fragmented  | 19 bytes | 16  | 2   | 37 bytes       |
 
 ### Bandwidth Examples
 
 **Telemetry @10Hz (Attitude Message):**
+
 - Payload: 12 bytes
 - Packet (encrypted): 12 + 34 = 46 bytes
 - Bandwidth: 46 × 10 = 460 bytes/sec = 3.68 kbps
 
 **GPS @5Hz:**
+
 - Payload: 22 bytes
 - Packet (encrypted): 22 + 34 = 56 bytes
 - Bandwidth: 56 × 5 = 280 bytes/sec = 2.24 kbps
@@ -1105,6 +1156,7 @@ printf("✓ Round-trip test passed!\n");
 ### CPU Performance
 
 On ARM Cortex-M4 @168MHz:
+
 - Parse byte: ~5 µs
 - CRC-16: ~15 µs
 - ChaCha20-Poly1305 encrypt (12 bytes): ~200 µs
@@ -1121,12 +1173,10 @@ On ARM Cortex-M4 @168MHz:
   - Packet structure design
   - Base encoder/decoder
   - 5 message types implemented
-  
 - **February 2026** - ChaCha20-Poly1305 AEAD integration
   - Full encryption implementation
   - MAC authentication
   - Security hardening
-  
 - **March 2026** - Comprehensive test suite development
   - Built 33-test validation framework
   - Discovered and fixed 3 critical bugs
@@ -1161,6 +1211,7 @@ Contributions welcome! Areas of interest:
 - **Tools** - Wireshark dissector, log analyzers, packet generators
 
 **How to Contribute:**
+
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/new-message`)
 3. Make your changes with tests

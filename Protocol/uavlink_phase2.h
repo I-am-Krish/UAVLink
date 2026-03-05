@@ -46,6 +46,7 @@ typedef struct
     uint16_t msg_id;         // Current message ID (12-bit field)
     uint8_t cipher_nonce[8]; // Nonce for decryption
     uint8_t cipher_tag[16];  // Authentication tag
+    uint8_t *last_payload;   // Pointer to completed payload (valid after result==1)
 } ul_parser_zerocopy_t;
 
 /**

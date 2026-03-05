@@ -51,24 +51,21 @@ void ul_crc_accumulate(uint8_t data, uint16_t *crcAccum)
     *crcAccum = (*crcAccum >> 8) ^ (tmp << 8) ^ (tmp << 3) ^ (tmp >> 4);
 }
 
-/* Returns the MAVLink-style CRC Extra seed for the known message types */
-static uint8_t ul_get_crc_seed(uint16_t msg_id)
+/* CRC seed lookup table indexed by message ID (0 = unknown) */
+static const uint8_t ul_crc_seed_table[] = {
+    /* 0x00 HEARTBEAT */ 50,
+    /* 0x01 ATTITUDE  */ 39,
+    /* 0x02 GPS_RAW   */ 24,
+    /* 0x03 BATTERY   */ 154,
+    /* 0x04 RC_INPUT  */ 89,
+};
+#define UL_CRC_SEED_TABLE_SIZE (sizeof(ul_crc_seed_table) / sizeof(ul_crc_seed_table[0]))
+
+uint8_t ul_get_crc_seed(uint16_t msg_id)
 {
-    switch (msg_id)
-    {
-    case UL_MSG_HEARTBEAT:
-        return 50;
-    case UL_MSG_ATTITUDE:
-        return 39;
-    case UL_MSG_GPS_RAW:
-        return 24;
-    case UL_MSG_BATTERY:
-        return 154;
-    case UL_MSG_RC_INPUT:
-        return 89;
-    default:
-        return 0; // Unknown message
-    }
+    if (msg_id < UL_CRC_SEED_TABLE_SIZE)
+        return ul_crc_seed_table[msg_id];
+    return 0; // Unknown message
 }
 
 /* --- Base Header --- */
@@ -129,7 +126,9 @@ int ul_encode_ext_header(uint8_t *buf, const ul_header_t *h)
     buf[offset++] = (comp_msg >> 8) & 0xFF;
     buf[offset++] = comp_msg & 0xFF;
 
-    if (h->target_sys_id != 0)
+    // Only encode target_sys_id for CMD/CMD_ACK stream types to match decoder
+    if ((h->stream_type == UL_STREAM_CMD || h->stream_type == UL_STREAM_CMD_ACK)
+        && h->target_sys_id != 0)
     {
         buf[offset++] = h->target_sys_id & 0x3F;
     }
@@ -216,7 +215,18 @@ static float half_to_float(uint16_t h)
     int32_t e = (h >> 10) & 0x1F;
     if (e == 0)
     {
-        // subnormal, skip for this basic impl
+        // Subnormal: handle mantissa != 0 (value = mantissa * 2^-24)
+        uint32_t mantissa = h & 0x3FF;
+        if (mantissa != 0)
+        {
+            x |= (mantissa << 13); // Place mantissa bits
+            // Normalize: find highest set bit
+            int shift = 0;
+            uint32_t m = mantissa;
+            while ((m & 0x200) == 0) { m <<= 1; shift++; }
+            x = ((h & 0x8000) << 16) | ((127 - 15 - shift) << 23) | ((mantissa << (shift + 13)) & 0x7FFFFF);
+        }
+        // mantissa == 0 means ±0.0, x is correct already
     }
     else if (e == 31)
     {
@@ -303,7 +313,11 @@ int ul_serialize_heartbeat(const ul_heartbeat_t *hb, uint8_t *out)
     if (!hb || !out)
         return UL_ERR_NULL_POINTER;
 
-    pack_float(&out[0], (float)hb->system_status);
+    // Use raw uint32 serialization to preserve all 32 bits (not float which loses bits > 2^24)
+    out[0] = (hb->system_status) & 0xFF;
+    out[1] = (hb->system_status >> 8) & 0xFF;
+    out[2] = (hb->system_status >> 16) & 0xFF;
+    out[3] = (hb->system_status >> 24) & 0xFF;
     out[4] = hb->system_type;
     out[5] = hb->autopilot_type;
     out[6] = hb->base_mode;
@@ -315,7 +329,9 @@ int ul_deserialize_heartbeat(ul_heartbeat_t *hb, const uint8_t *in)
     if (!hb || !in)
         return UL_ERR_NULL_POINTER;
 
-    hb->system_status = (uint32_t)unpack_float(&in[0]);
+    // Deserialize as raw uint32 (matching serializer above)
+    hb->system_status = (uint32_t)in[0] | ((uint32_t)in[1] << 8) |
+                        ((uint32_t)in[2] << 16) | ((uint32_t)in[3] << 24);
     hb->system_type = in[4];
     hb->autopilot_type = in[5];
     hb->base_mode = in[6];
@@ -473,21 +489,34 @@ static uint32_t ul_get_random_u32(void)
     HCRYPTPROV hProvider = 0;
     uint32_t random_value = 0;
 
-    if (CryptAcquireContext(&hProvider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT))
+    if (!CryptAcquireContext(&hProvider, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT))
     {
-        CryptGenRandom(hProvider, sizeof(random_value), (BYTE *)&random_value);
-        CryptReleaseContext(hProvider, 0);
+        /* Fallback: use XOR of compile-time and runtime values — not cryptographic,
+           but avoids silently returning 0 which would be a predictable nonce. */
+        random_value = (uint32_t)(uintptr_t)&random_value ^ 0xDEADBEEFu;
+        return random_value;
     }
+    if (!CryptGenRandom(hProvider, sizeof(random_value), (BYTE *)&random_value))
+    {
+        random_value = (uint32_t)(uintptr_t)&random_value ^ 0xCAFEBABEu;
+    }
+    CryptReleaseContext(hProvider, 0);
     return random_value;
 #else
     /* Linux/Unix /dev/urandom */
     uint32_t random_value = 0;
     int fd = open("/dev/urandom", O_RDONLY);
-    if (fd >= 0)
+    if (fd < 0)
     {
-        ssize_t result = read(fd, &random_value, sizeof(random_value));
-        (void)result; /* Suppress unused warning - failure returns 0 which is acceptable */
-        close(fd);
+        /* Fallback: use address-space entropy — not cryptographic, but not zero */
+        return (uint32_t)(uintptr_t)&random_value ^ 0xDEADBEEFu;
+    }
+    ssize_t n = read(fd, &random_value, sizeof(random_value));
+    close(fd);
+    if (n != (ssize_t)sizeof(random_value))
+    {
+        /* Partial read fallback */
+        random_value ^= (uint32_t)(uintptr_t)&random_value ^ 0xCAFEBABEu;
     }
     return random_value;
 #endif
@@ -518,6 +547,11 @@ void ul_nonce_generate(ul_nonce_state_t *state, uint8_t nonce[8])
        - First 4 bytes: Monotonic counter (ensures uniqueness)
        - Last 4 bytes: Random data (adds entropy) */
 
+    // Detect counter overflow: if counter is about to wrap, reinitialize with fresh random seed
+    if (state->counter == 0xFFFFFFFF)
+    {
+        state->counter = ul_get_random_u32(); // Re-seed instead of silent wrap to 0
+    }
     uint32_t counter = state->counter++;
     uint32_t random = ul_get_random_u32();
 
@@ -824,19 +858,19 @@ int uavlink_pack_with_nonce(uint8_t *buf, const ul_header_t *h, const uint8_t *p
 /* Default encryption policy table (per message ID)
    This table defines which messages require encryption by default */
 static ul_encrypt_policy_t msg_encrypt_policy_table[1024] = {
-    [UL_MSG_HEARTBEAT] = UL_ENCRYPT_NEVER,     /* Public status - no crypto overhead */
-    [UL_MSG_ATTITUDE]  = UL_ENCRYPT_NEVER,     /* High-rate telemetry - bandwidth critical */
-    [UL_MSG_GPS_RAW]   = UL_ENCRYPT_OPTIONAL,  /* Medium sensitivity - encrypt if key provided */
-    [UL_MSG_BATTERY]   = UL_ENCRYPT_OPTIONAL,  /* Medium sensitivity */
-    [UL_MSG_RC_INPUT]  = UL_ENCRYPT_ALWAYS,    /* Security-critical - always encrypt */
-    [UL_MSG_CMD]       = UL_ENCRYPT_ALWAYS,    /* Commands must be encrypted */
-    [UL_MSG_BATCH]     = UL_ENCRYPT_OPTIONAL   /* Batched messages - follow policy */
+    [UL_MSG_HEARTBEAT] = UL_ENCRYPT_NEVER,  /* Public status - no crypto overhead */
+    [UL_MSG_ATTITUDE] = UL_ENCRYPT_NEVER,   /* High-rate telemetry - bandwidth critical */
+    [UL_MSG_GPS_RAW] = UL_ENCRYPT_OPTIONAL, /* Medium sensitivity - encrypt if key provided */
+    [UL_MSG_BATTERY] = UL_ENCRYPT_OPTIONAL, /* Medium sensitivity */
+    [UL_MSG_RC_INPUT] = UL_ENCRYPT_ALWAYS,  /* Security-critical - always encrypt */
+    [UL_MSG_CMD] = UL_ENCRYPT_ALWAYS,       /* Commands must be encrypted */
+    [UL_MSG_BATCH] = UL_ENCRYPT_OPTIONAL    /* Batched messages - follow policy */
 };
 
 ul_encrypt_policy_t ul_get_encrypt_policy(uint16_t msg_id)
 {
     if (msg_id >= 1024)
-        return UL_ENCRYPT_OPTIONAL;  /* Default for unknown messages */
+        return UL_ENCRYPT_OPTIONAL; /* Default for unknown messages */
     return msg_encrypt_policy_table[msg_id];
 }
 
@@ -862,19 +896,19 @@ int uavlink_pack_selective(uint8_t *buf, const ul_header_t *h, const uint8_t *pa
 
     switch (policy)
     {
-        case UL_ENCRYPT_NEVER:
-            effective_key = NULL;  /* Never encrypt, ignore key */
-            break;
+    case UL_ENCRYPT_NEVER:
+        effective_key = NULL; /* Never encrypt, ignore key */
+        break;
 
-        case UL_ENCRYPT_OPTIONAL:
-            effective_key = key_32b;  /* Encrypt only if key provided */
-            break;
+    case UL_ENCRYPT_OPTIONAL:
+        effective_key = key_32b; /* Encrypt only if key provided */
+        break;
 
-        case UL_ENCRYPT_ALWAYS:
-            if (!key_32b)
-                return UL_ERR_NO_KEY;  /* Policy violation - key required */
-            effective_key = key_32b;
-            break;
+    case UL_ENCRYPT_ALWAYS:
+        if (!key_32b)
+            return UL_ERR_NO_KEY; /* Policy violation - key required */
+        effective_key = key_32b;
+        break;
     }
 
     /* Pack with determined encryption policy */
@@ -942,11 +976,11 @@ int uavlink_pack_batch(uint8_t *buf, const ul_batch_t *batch,
         return UL_ERR_INVALID_HEADER;
 
     /* Calculate total payload size */
-    uint16_t total_payload_len = 1;  /* 1 byte for num_messages */
+    uint16_t total_payload_len = 1; /* 1 byte for num_messages */
 
     for (int i = 0; i < batch->num_messages; i++)
     {
-        total_payload_len += 3;  /* msg_id (2 bytes) + length (1 byte) */
+        total_payload_len += 3; /* msg_id (2 bytes) + length (1 byte) */
         total_payload_len += batch->messages[i].length;
     }
 
@@ -979,10 +1013,10 @@ int uavlink_pack_batch(uint8_t *buf, const ul_batch_t *batch,
     header.priority = priority;
     header.stream_type = UL_STREAM_CUSTOM;
     header.msg_id = UL_MSG_BATCH;
-    header.sequence = 0;  /* Caller should set if needed */
-    header.sys_id = 1;    /* Caller should set if needed */
+    header.sequence = 0; /* Caller should set if needed */
+    header.sys_id = 1;   /* Caller should set if needed */
     header.comp_id = 1;
-    header.target_sys_id = 0;  /* Broadcast */
+    header.target_sys_id = 0; /* Broadcast */
 
     /* Pack the batched message using selective encryption */
     return uavlink_pack_selective(buf, &header, payload, key_32b, nonce_state);

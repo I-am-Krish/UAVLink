@@ -49,8 +49,10 @@ static stats_t g_stats = {0};
 #include <windows.h>
 static uint64_t get_time_us(void)
 {
-    LARGE_INTEGER freq, counter;
-    QueryPerformanceFrequency(&freq);
+    static LARGE_INTEGER freq = {0};
+    if (freq.QuadPart == 0)
+        QueryPerformanceFrequency(&freq); // Cached after first call
+    LARGE_INTEGER counter;
     QueryPerformanceCounter(&counter);
     return (counter.QuadPart * 1000000) / freq.QuadPart;
 }
