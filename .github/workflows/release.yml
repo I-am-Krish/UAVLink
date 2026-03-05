@@ -1,0 +1,195 @@
+name: Build & Release UAVLink
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Windows Build
+  # ─────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install MinGW
+        uses: egor-tensin/setup-mingw@v2
+
+      - name: Build static library
+        working-directory: Protocol
+        run: |
+          gcc -Wall -O2 -c uavlink.c uavlink_fast.c uavlink_compress.c uavlink_hw_crypto.c monocypher.c
+          ar rcs uavlink_win64.lib *.o
+          echo "✅ Built uavlink_win64.lib"
+
+      - name: Build executables
+        working-directory: Protocol
+        run: |
+          gcc -Wall -O2 -o gcs_receiver.exe gcs_receiver.c uavlink.c uavlink_fast.c uavlink_compress.c uavlink_hw_crypto.c monocypher.c -lws2_32 -lm
+          gcc -Wall -O2 -o uav_simulator.exe uav_simulator.c uavlink.c uavlink_fast.c uavlink_compress.c uavlink_hw_crypto.c monocypher.c -lws2_32 -lm
+          gcc -Wall -O2 -o uavlink_benchmark.exe uavlink_benchmark.c uavlink.c uavlink_fast.c uavlink_compress.c uavlink_hw_crypto.c monocypher.c -lws2_32 -lm
+          echo "✅ Built all executables"
+
+      - name: Package SDK
+        run: |
+          mkdir -p uavlink-sdk/include
+          mkdir -p uavlink-sdk/lib
+          mkdir -p uavlink-sdk/bin
+          mkdir -p uavlink-sdk/examples
+
+          # Headers
+          cp Protocol/uavlink.h uavlink-sdk/include/
+          cp Protocol/uavlink_fast.h uavlink-sdk/include/
+          cp Protocol/uavlink_compress.h uavlink-sdk/include/
+          cp Protocol/uavlink_hw_crypto.h uavlink-sdk/include/
+          cp Protocol/monocypher.h uavlink-sdk/include/
+
+          # Static library
+          cp Protocol/uavlink_win64.lib uavlink-sdk/lib/
+
+          # Executables
+          cp Protocol/gcs_receiver.exe uavlink-sdk/bin/
+          cp Protocol/uav_simulator.exe uavlink-sdk/bin/
+          cp Protocol/uavlink_benchmark.exe uavlink-sdk/bin/
+
+          # Examples
+          cp Protocol/uav_simulator.c uavlink-sdk/examples/
+          cp Protocol/gcs_receiver.c uavlink-sdk/examples/
+          cp Protocol/uavlink_benchmark.c uavlink-sdk/examples/
+
+          # Docs
+          cp README.md uavlink-sdk/
+          cp LICENSE uavlink-sdk/
+
+      - name: Create ZIP
+        run: Compress-Archive -Path uavlink-sdk/* -DestinationPath UAVLink-${{ github.ref_name }}-windows-x64.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: UAVLink-${{ github.ref_name }}-windows-x64.zip
+
+  # ─────────────────────────────────────────────
+  # Linux Build
+  # ─────────────────────────────────────────────
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build static library
+        working-directory: Protocol
+        run: |
+          gcc -Wall -O2 -c uavlink.c uavlink_fast.c uavlink_compress.c uavlink_hw_crypto.c monocypher.c
+          ar rcs libuavlink_linux.a *.o
+          echo "✅ Built libuavlink_linux.a"
+
+      - name: Build executables
+        working-directory: Protocol
+        run: |
+          gcc -Wall -O2 -o gcs_receiver gcs_receiver.c uavlink.c uavlink_fast.c uavlink_compress.c uavlink_hw_crypto.c monocypher.c -lm
+          gcc -Wall -O2 -o uav_simulator uav_simulator.c uavlink.c uavlink_fast.c uavlink_compress.c uavlink_hw_crypto.c monocypher.c -lm
+          gcc -Wall -O2 -o uavlink_benchmark uavlink_benchmark.c uavlink.c uavlink_fast.c uavlink_compress.c uavlink_hw_crypto.c monocypher.c -lm
+          echo "✅ Built all executables"
+
+      - name: Package SDK
+        run: |
+          mkdir -p uavlink-sdk/include
+          mkdir -p uavlink-sdk/lib
+          mkdir -p uavlink-sdk/bin
+          mkdir -p uavlink-sdk/examples
+
+          # Headers
+          cp Protocol/uavlink.h uavlink-sdk/include/
+          cp Protocol/uavlink_fast.h uavlink-sdk/include/
+          cp Protocol/uavlink_compress.h uavlink-sdk/include/
+          cp Protocol/uavlink_hw_crypto.h uavlink-sdk/include/
+          cp Protocol/monocypher.h uavlink-sdk/include/
+
+          # Static library
+          cp Protocol/libuavlink_linux.a uavlink-sdk/lib/
+
+          # Executables
+          cp Protocol/gcs_receiver uavlink-sdk/bin/
+          cp Protocol/uav_simulator uavlink-sdk/bin/
+          cp Protocol/uavlink_benchmark uavlink-sdk/bin/
+
+          # Examples
+          cp Protocol/uav_simulator.c uavlink-sdk/examples/
+          cp Protocol/gcs_receiver.c uavlink-sdk/examples/
+          cp Protocol/uavlink_benchmark.c uavlink-sdk/examples/
+
+          # Docs
+          cp README.md uavlink-sdk/
+          cp LICENSE uavlink-sdk/
+
+      - name: Create tarball
+        run: tar -czf UAVLink-${{ github.ref_name }}-linux-x64.tar.gz -C uavlink-sdk .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: UAVLink-${{ github.ref_name }}-linux-x64.tar.gz
+
+  # ─────────────────────────────────────────────
+  # Create GitHub Release
+  # ─────────────────────────────────────────────
+  create-release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-release
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: UAVLink ${{ github.ref_name }}
+          body: |
+            ## UAVLink ${{ github.ref_name }}
+
+            ### 📦 What's Included
+            - **Static Library** — Link `uavlink.lib` / `libuavlink.a` into your own projects
+            - **Pre-built Executables** — `gcs_receiver`, `uav_simulator`, `uavlink_benchmark`
+            - **Headers** — All public API headers in `include/`
+            - **Examples** — Source code for the simulator, receiver, and benchmark
+
+            ### 🚀 Quick Start
+            ```bash
+            # Extract the archive
+            # Run the GCS receiver:
+            ./bin/gcs_receiver
+
+            # Run the simulator (defaults to localhost):
+            ./bin/uav_simulator
+
+            # Or target a specific IP:
+            ./bin/uav_simulator 192.168.1.25
+            ```
+
+            ### 🔗 Integrate as Library
+            ```c
+            #include "uavlink.h"
+            // Link with -luavlink or uavlink_win64.lib
+            ```
+          files: |
+            UAVLink-${{ github.ref_name }}-windows-x64.zip
+            UAVLink-${{ github.ref_name }}-linux-x64.tar.gz
+          draft: false
+          prerelease: false

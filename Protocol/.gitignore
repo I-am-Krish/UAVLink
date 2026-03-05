@@ -1,6 +1,8 @@
 # Build artifacts
 *.o
 *.exe
+*.lib
+*.a
 
 # Binary outputs (Linux/macOS)
 uavlink_benchmark
@@ -10,6 +12,13 @@ uavlink_test
 example
 example_messages
 test_uavlink
+
+# SDK & Release output
+uavlink-sdk/
+release/
+build/
+UAVLink-*.zip
+UAVLink-*.tar.gz
 
 # IDE files
 .vscode/
